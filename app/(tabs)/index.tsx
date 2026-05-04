@@ -1,98 +1,133 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
-
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import { StyleSheet, View, Text, ScrollView } from 'react-native';
+import { useRouter } from 'expo-router';
+import { Card } from '@/components/Card';
+import { StatBox } from '@/components/StatBox';
+import { MOCK_USER, MOCK_WORKOUTS } from '@/constants/mockData';
+import { IconSymbol } from '@/components/ui/icon-symbol';
 
 export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+  const router = useRouter();
+  const lastWorkout = MOCK_WORKOUTS[0];
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+  return (
+    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <View style={styles.header}>
+        <Text style={styles.greeting}>Hola, {MOCK_USER.name}</Text>
+        <Text style={styles.subtitle}>🔥 {MOCK_USER.streak} días en racha</Text>
+      </View>
+
+      <Card 
+        title="Último Entrenamiento" 
+        subtitle={lastWorkout.date}
+        onPress={() => router.push('/history')}
+      >
+        <Text style={styles.workoutName}>{lastWorkout.name}</Text>
+        <View style={styles.statsRow}>
+          <StatBox label="Volumen" value={lastWorkout.volume} color="#E1FF01" />
+          <StatBox label="Tiempo" value={lastWorkout.duration} color="#00F0FF" />
+        </View>
+      </Card>
+
+      <Card 
+        title="Descanso Actual" 
+        onPress={() => router.push('/rest')}
+        style={styles.restCard}
+      >
+        <View style={styles.restContent}>
+          <IconSymbol name="timer" size={32} color="#E1FF01" />
+          <Text style={styles.restTime}>00:00</Text>
+        </View>
+        <Text style={styles.restHint}>Listo para la próxima serie</Text>
+      </Card>
+
+      <View style={styles.gridContainer}>
+        <Card 
+          style={styles.gridItem} 
+          onPress={() => router.push('/workout')}
+        >
+          <IconSymbol name="figure.strengthtraining.traditional" size={40} color="#E1FF01" />
+          <Text style={styles.gridItemText}>Empezar</Text>
+          <Text style={styles.gridItemText}>Rutina</Text>
+        </Card>
+        
+        <Card 
+          style={styles.gridItem}
+          onPress={() => router.push('/exercises')}
+        >
+          <IconSymbol name="list.bullet.clipboard" size={40} color="#00F0FF" />
+          <Text style={styles.gridItemText}>Biblioteca</Text>
+          <Text style={styles.gridItemText}>Ejercicios</Text>
+        </Card>
+      </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
+  container: {
+    flex: 1,
+    backgroundColor: '#151718',
+  },
+  content: {
+    padding: 16,
+  },
+  header: {
+    marginBottom: 24,
+  },
+  greeting: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+  },
+  subtitle: {
+    fontSize: 16,
+    color: '#A0A0A0',
+    marginTop: 4,
+  },
+  workoutName: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginBottom: 16,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  restCard: {
+    borderColor: '#E1FF01',
+    borderWidth: 1,
+  },
+  restContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-  },
-  stepContainer: {
-    gap: 8,
     marginBottom: 8,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  restTime: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    marginLeft: 12,
+  },
+  restHint: {
+    color: '#A0A0A0',
+    fontSize: 14,
+  },
+  gridContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 16,
+  },
+  gridItem: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 24,
+  },
+  gridItemText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    marginTop: 8,
   },
 });
