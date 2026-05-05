@@ -2,12 +2,28 @@ import { StyleSheet, View, Text, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Card } from '@/components/Card';
 import { StatBox } from '@/components/StatBox';
-import { MOCK_USER, MOCK_WORKOUTS } from '@/constants/mockData';
+import { MOCK_USER } from '@/constants/mockData';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { useWorkoutContext } from '@/context/WorkoutContext';
+import { useTimerContext } from '@/context/TimerContext';
+import { useProgressContext } from '@/context/ProgressContext';
+import { EXERCISES_DB } from '@/constants/exercisesDB';
 
 export default function HomeScreen() {
   const router = useRouter();
-  const lastWorkout = MOCK_WORKOUTS[0];
+  const { history: workoutHistory } = useWorkoutContext();
+  const { timeLeft, isActive } = useTimerContext();
+  const { history: progressHistory } = useProgressContext();
+  
+  const lastWorkout = workoutHistory.length > 0 ? workoutHistory[0] : null;
+  const lastProgress = progressHistory.length > 0 ? progressHistory[0] : null;
+  const exercisesCount = EXERCISES_DB.length;
+
+  const formatTime = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -18,14 +34,20 @@ export default function HomeScreen() {
 
       <Card 
         title="Último Entrenamiento" 
-        subtitle={lastWorkout.date}
+        subtitle={lastWorkout ? lastWorkout.date : "Aún no hay registros"}
         onPress={() => router.push('/history')}
       >
-        <Text style={styles.workoutName}>{lastWorkout.name}</Text>
-        <View style={styles.statsRow}>
-          <StatBox label="Volumen" value={lastWorkout.volume} color="#E1FF01" />
-          <StatBox label="Tiempo" value={lastWorkout.duration} color="#00F0FF" />
-        </View>
+        {lastWorkout ? (
+          <>
+            <Text style={styles.workoutName}>{lastWorkout.name}</Text>
+            <View style={styles.statsRow}>
+              <StatBox label="Volumen" value={lastWorkout.volume} color="#E1FF01" />
+              <StatBox label="Tiempo" value={lastWorkout.duration} color="#00F0FF" />
+            </View>
+          </>
+        ) : (
+          <Text style={styles.emptyText}>Completa una rutina para ver tu progreso aquí.</Text>
+        )}
       </Card>
 
       <Card 
@@ -34,10 +56,33 @@ export default function HomeScreen() {
         style={styles.restCard}
       >
         <View style={styles.restContent}>
-          <IconSymbol name="timer" size={32} color="#E1FF01" />
-          <Text style={styles.restTime}>00:00</Text>
+          <IconSymbol name="timer" size={32} color={isActive ? "#00F0FF" : "#E1FF01"} />
+          <Text style={[styles.restTime, isActive && { color: "#00F0FF" }]}>{formatTime(timeLeft)}</Text>
         </View>
-        <Text style={styles.restHint}>Listo para la próxima serie</Text>
+        <Text style={styles.restHint}>
+          {isActive ? "Descanso en progreso..." : "Listo para la próxima serie"}
+        </Text>
+      </Card>
+
+      <Card
+        title="Progreso"
+        subtitle={lastProgress ? lastProgress.date : "Registra tu peso"}
+        onPress={() => router.push('/progress')}
+        style={styles.progressCard}
+      >
+        <View style={styles.progressContent}>
+          <View style={styles.progressIconContainer}>
+            <IconSymbol name="chart.line.uptrend.xyaxis" size={32} color="#E1FF01" />
+          </View>
+          <View style={styles.progressData}>
+            <Text style={styles.progressValue}>
+              {lastProgress ? `${lastProgress.weight} kg` : '-- kg'}
+            </Text>
+            <Text style={styles.progressSubtext}>
+              {lastProgress ? 'Último registro' : 'Toca para empezar'}
+            </Text>
+          </View>
+        </View>
       </Card>
 
       <View style={styles.gridContainer}>
@@ -46,8 +91,10 @@ export default function HomeScreen() {
           onPress={() => router.push('/workout')}
         >
           <IconSymbol name="figure.strengthtraining.traditional" size={40} color="#E1FF01" />
-          <Text style={styles.gridItemText}>Empezar</Text>
-          <Text style={styles.gridItemText}>Rutina</Text>
+          <Text style={styles.gridItemText}>Entrenar</Text>
+          <Text style={styles.gridItemSubText}>
+            {workoutHistory.length} {workoutHistory.length === 1 ? 'rutina' : 'rutinas'}
+          </Text>
         </Card>
         
         <Card 
@@ -55,8 +102,8 @@ export default function HomeScreen() {
           onPress={() => router.push('/exercises')}
         >
           <IconSymbol name="list.bullet.clipboard" size={40} color="#00F0FF" />
-          <Text style={styles.gridItemText}>Biblioteca</Text>
           <Text style={styles.gridItemText}>Ejercicios</Text>
+          <Text style={styles.gridItemSubText}>{exercisesCount} disponibles</Text>
         </Card>
       </View>
     </ScrollView>
@@ -94,9 +141,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
+  emptyText: {
+    color: '#A0A0A0',
+    fontSize: 16,
+    marginBottom: 8,
+  },
   restCard: {
     borderColor: '#E1FF01',
     borderWidth: 1,
+    marginBottom: 16,
   },
   restContent: {
     flexDirection: 'row',
@@ -113,6 +166,32 @@ const styles = StyleSheet.create({
     color: '#A0A0A0',
     fontSize: 14,
   },
+  progressCard: {
+    marginBottom: 16,
+  },
+  progressContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  progressIconContainer: {
+    backgroundColor: 'rgba(225, 255, 1, 0.1)',
+    padding: 12,
+    borderRadius: 12,
+    marginRight: 16,
+  },
+  progressData: {
+    flex: 1,
+  },
+  progressValue: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+  },
+  progressSubtext: {
+    fontSize: 14,
+    color: '#A0A0A0',
+    marginTop: 4,
+  },
   gridContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -128,6 +207,12 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
-    marginTop: 8,
+    marginTop: 12,
+  },
+  gridItemSubText: {
+    color: '#A0A0A0',
+    fontSize: 12,
+    marginTop: 4,
   },
 });
+

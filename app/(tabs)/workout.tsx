@@ -3,6 +3,8 @@ import { StyleSheet, View, Text, ScrollView, TouchableOpacity, TextInput, Alert 
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useWorkoutContext } from '@/context/WorkoutContext';
 import { useRouter } from 'expo-router';
+import { TEMPLATES_DB, TemplateDefinition } from '@/constants/templatesDB';
+import { Card } from '@/components/Card';
 
 // Tipos
 type WorkoutSet = {
@@ -21,8 +23,45 @@ type Exercise = {
 export default function WorkoutScreen() {
   const router = useRouter();
   const { addWorkout } = useWorkoutContext();
+  
+  // Estado para controlar en qué fase estamos (Catálogo o Entrenamiento Activo)
+  const [isActiveWorkout, setIsActiveWorkout] = useState(false);
+
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [workoutName, setWorkoutName] = useState('Nuevo Entrenamiento');
+
+  // Funciones de la Fase 1: Catálogo
+
+  const startBlankWorkout = () => {
+    setWorkoutName('Entrenamiento Personalizado');
+    setExercises([]);
+    setIsActiveWorkout(true);
+  };
+
+  const startTemplate = (template: TemplateDefinition) => {
+    setWorkoutName(template.name);
+    
+    // Convertir la definición de la plantilla a estado de ejercicios activos
+    const templateExercises: Exercise[] = template.exercises.map(exDef => {
+      const sets: WorkoutSet[] = Array.from({ length: exDef.defaultSets }).map((_, i) => ({
+        id: `${Date.now()}-${exDef.id}-set-${i}`,
+        weight: '',
+        reps: '',
+        completed: false
+      }));
+
+      return {
+        id: `${Date.now()}-${exDef.id}`,
+        name: exDef.name,
+        sets
+      };
+    });
+
+    setExercises(templateExercises);
+    setIsActiveWorkout(true);
+  };
+
+  // Funciones de la Fase 2: Entrenamiento Activo
 
   const finishWorkout = () => {
     if (exercises.length === 0) {
@@ -49,9 +88,29 @@ export default function WorkoutScreen() {
       exercises: [...exercises],
     });
 
+    // Reset y volver a la pantalla de historial
+    setIsActiveWorkout(false);
     setExercises([]);
     setWorkoutName('Nuevo Entrenamiento');
     router.push('/history');
+  };
+
+  const cancelWorkout = () => {
+    Alert.alert(
+      'Cancelar Entrenamiento',
+      '¿Estás seguro de que quieres descartar este entrenamiento?',
+      [
+        { text: 'No', style: 'cancel' },
+        { 
+          text: 'Sí, descartar', 
+          style: 'destructive', 
+          onPress: () => {
+            setIsActiveWorkout(false);
+            setExercises([]);
+          }
+        }
+      ]
+    );
   };
 
   const addExercise = () => {
@@ -118,10 +177,48 @@ export default function WorkoutScreen() {
     ));
   };
 
+
+  // Renderizado Fase 1: Catálogo de Plantillas
+  if (!isActiveWorkout) {
+    return (
+      <ScrollView style={styles.container} contentContainerStyle={styles.catalogContent}>
+        <Text style={styles.screenTitle}>Elige tu Entrenamiento</Text>
+        
+        <TouchableOpacity style={styles.blankWorkoutBtn} onPress={startBlankWorkout}>
+          <IconSymbol name="plus.circle.fill" size={24} color="#000" />
+          <Text style={styles.blankWorkoutText}>Empezar Entrenamiento en Blanco</Text>
+        </TouchableOpacity>
+
+        <Text style={styles.sectionTitle}>Plantillas Sugeridas</Text>
+        
+        {TEMPLATES_DB.map(template => (
+          <Card 
+            key={template.id}
+            title={template.name}
+            subtitle={template.description}
+            style={styles.templateCard}
+            onPress={() => startTemplate(template)}
+          >
+            <View style={styles.templateFooter}>
+              <IconSymbol name={template.icon} size={20} color="#00F0FF" />
+              <Text style={styles.templateExercisesCount}>
+                {template.exercises.length} ejercicios
+              </Text>
+            </View>
+          </Card>
+        ))}
+      </ScrollView>
+    );
+  }
+
+  // Renderizado Fase 2: Entrenamiento Activo
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.header}>
+          <TouchableOpacity style={styles.cancelBtn} onPress={cancelWorkout}>
+            <IconSymbol name="xmark" size={24} color="#A0A0A0" />
+          </TouchableOpacity>
           <TextInput 
             style={styles.titleInput}
             value={workoutName}
@@ -210,15 +307,64 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#151718',
   },
+  catalogContent: {
+    padding: 16,
+    paddingBottom: 40,
+  },
+  screenTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    marginBottom: 24,
+    paddingTop: 10,
+  },
+  blankWorkoutBtn: {
+    backgroundColor: '#E1FF01',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    borderRadius: 12,
+    marginBottom: 32,
+    gap: 8,
+  },
+  blankWorkoutText: {
+    color: '#000000',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    marginBottom: 16,
+  },
+  templateCard: {
+    marginBottom: 16,
+  },
+  templateFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 12,
+    gap: 8,
+  },
+  templateExercisesCount: {
+    color: '#00F0FF',
+    fontSize: 14,
+    fontWeight: '500',
+  },
   content: {
     padding: 16,
     paddingBottom: 100,
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 24,
+    paddingTop: 10,
+  },
+  cancelBtn: {
+    paddingRight: 16,
   },
   titleInput: {
     fontSize: 24,
@@ -226,12 +372,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     flex: 1,
     padding: 0,
-  },
-  timeElapsed: {
-    fontSize: 18,
-    color: '#E1FF01',
-    fontWeight: '600',
-    marginLeft: 10,
   },
   exerciseContainer: {
     marginBottom: 32,

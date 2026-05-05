@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, ScrollView, Modal, TextInput } from 'react-native';
+import { useTimerContext } from '@/context/TimerContext';
 
 const PRESETS = [
   { label: '1m', value: 60 },
@@ -8,9 +9,17 @@ const PRESETS = [
 ];
 
 export default function RestScreen() {
-  const [timeLeft, setTimeLeft] = useState(90);
-  const [isActive, setIsActive] = useState(false);
-  const [initialTime, setInitialTime] = useState(90);
+  const { 
+    timeLeft, 
+    isActive, 
+    initialTime, 
+    toggleTimer, 
+    resetTimer, 
+    setPreset, 
+    addTime, 
+    setTimeLeft 
+  } = useTimerContext();
+  
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [customMin, setCustomMin] = useState('0');
   const [customSec, setCustomSec] = useState('0');
@@ -25,45 +34,6 @@ export default function RestScreen() {
     setIsModalVisible(false);
   };
 
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    
-    if (isActive && timeLeft > 0) {
-      interval = setInterval(() => {
-        setTimeLeft((prevTime) => prevTime - 1);
-      }, 1000);
-    } else if (timeLeft === 0) {
-      setIsActive(false);
-    }
-
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [isActive, timeLeft]);
-
-  const toggleTimer = () => {
-    if (timeLeft === 0) {
-      setTimeLeft(initialTime);
-    }
-    setIsActive(!isActive);
-  };
-
-  const resetTimer = () => {
-    setIsActive(false);
-    setTimeLeft(initialTime);
-  };
-
-  const setPreset = (seconds: number) => {
-    setIsActive(false);
-    setInitialTime(seconds);
-    setTimeLeft(seconds);
-  };
-
-  const addTime = (seconds: number) => {
-    setTimeLeft((prev) => prev + seconds);
-    setInitialTime((prev) => prev + seconds);
-  };
-
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
@@ -71,6 +41,7 @@ export default function RestScreen() {
   };
 
   const progress = initialTime > 0 ? timeLeft / initialTime : 0;
+
   
   // Color dinámico: verde si está activo, amarillo si está pausado, rojo si se acaba
   const circleColor = isActive ? '#00F0FF' : timeLeft === 0 ? '#FF3366' : '#E1FF01';
